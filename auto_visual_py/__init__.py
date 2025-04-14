@@ -1,1 +1,1 @@
-from ImageBuilder import ImageBuilder, ImageFinder
+from .ImageBuilder import ImageBuilder, ImageFinder

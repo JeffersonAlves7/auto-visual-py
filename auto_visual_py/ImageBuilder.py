@@ -1,6 +1,6 @@
 from .AutoVisualimage import AutoVisualImage
 from typing import Optional, Self, Literal
-from .OpencvFinder import select_region
+from .RegionSelector import RegionSelector
 from .errors import PathNotFoundError
 from .types import RetryConfig
 
@@ -105,10 +105,23 @@ class ImageFinder:
         delay_after: Optional[int] = None,
     ) -> Optional[AutoVisualImage]:
         """
-        Pausa o programa, permite que o usuário selecione uma área da tela e retorna um AutoVisualImage com essa imagem.
+        Pausa a execução do programa, permite que o usuário selecione uma área da tela
+        e salva uma captura dessa região como imagem. A imagem é então carregada como um AutoVisualImage.
+
+        Args:
+            output_path (str): Caminho relativo onde a imagem será salva.
+            mode (str, opcional): Modo de processamento da imagem ('default', 'grayscale', 'hue_shift').
+            confidence (float, opcional): Nível de confiança para matching visual.
+            retry_config (RetryConfig, opcional): Configurações de tentativas automáticas.
+            delay_after (int, opcional): Tempo de espera após salvar a imagem.
+
+        Returns:
+            AutoVisualImage | None: Objeto da imagem capturada, ou None em caso de erro ou cancelamento.
         """
-        print("\n🔍 Prepare a tela onde deseja capturar o botão ou elemento visual.")
-        input("Pressione ENTER quando estiver pronto para selecionar a área...")
+        # Garante que o arquivo tenha uma extensão válida
+        valid_extensions = (".png", ".jpg", ".jpeg")
+        if not output_path.lower().endswith(valid_extensions):
+            output_path += ".png"
 
         file_path: str = os.path.join(self.path, output_path)
 
@@ -120,15 +133,18 @@ class ImageFinder:
                 retry_config=retry_config,
             )
 
+        print("\n🔍 Prepare a tela onde deseja capturar o botão ou elemento visual.")
+        input("Pressione ENTER quando estiver pronto para selecionar a área...")
+
+        selector = RegionSelector()
         try:
-            left, top, width, height = select_region()
+            left, top, width, height = selector.select()
         except Exception as e:
             print(f"❌ Erro ao selecionar a região: {e}")
             return None
 
         print(f"📸 Região selecionada: ({left}, {top}, {width}, {height})")
         screenshot = pyautogui.screenshot(region=(left, top, width, height))
-
         screenshot.save(file_path)
 
         if not delay_after:
@@ -146,6 +162,9 @@ class ImageBuilder:
         self.path: str | None = None
 
     def from_dir(self, path: str) -> Self:
+        if not os.path.exists(path):
+            os.makedirs(path)
+
         self.path = path
         return self
 
